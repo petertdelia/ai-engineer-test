@@ -1,24 +1,15 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-.venv/
-*.egg-info/
-dist/
-build/
-
 # Environment
 .env
 .env.*
 !.env.example
-
-# Test artifacts
-test.db
-.coverage
-htmlcov/
-.pytest_cache/
+!backend/.env.example
+!frontend/.env.local.example
 
 # Editor
 .idea/
 .vscode/
 *.swp
+.DS_Store
+
+# Test artifacts
+.pytest_cache/
