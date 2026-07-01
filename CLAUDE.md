@@ -67,6 +67,37 @@ Background workers in `workers/`:
 
 ---
 
+## Documentation
+
+**Default: no comments.** A well-named function and typed signature are documentation. Only add a comment when the *why* is non-obvious — a hidden constraint, a subtle invariant, a workaround for a known bug, or behavior that would surprise the next reader.
+
+**FastAPI route docstrings.** Every route handler gets a one-line docstring. FastAPI renders it in Swagger UI as the operation summary — it is user-facing documentation, not a code comment:
+
+```python
+@router.post("/sessions/{id}/complete")
+async def complete_session(id: UUID, ...):
+    """Finalize a session and trigger async scoring."""
+```
+
+Keep it to one sentence. Do not describe parameters — those come from the schema type annotations.
+
+**Repository methods.** No docstrings on standard CRUD (`get_by_id`, `create`, `update`). Add a one-line comment only on complex queries — explain the query strategy, not what the function does:
+
+```python
+async def get_stats(self, user_id: UUID, db: AsyncSession) -> StatsRow:
+    # unnests the technologies JSONB array per question before grouping;
+    # a straight GROUP BY on the session would miss multi-technology questions
+    result = await db.execute(text("..."))
+```
+
+**`core/` modules.** Document public functions with a one-line docstring when the caller cannot infer behavior from the signature alone. The circuit breaker state, token invalidation logic, and scoring rubric are examples where a brief note on the contract prevents misuse.
+
+**No block comments.** Do not write multi-line comment blocks or section dividers (`# --- Auth helpers ---`). If a file is long enough to need section headers, split it into smaller files.
+
+**OpenAPI metadata.** Each `APIRouter` sets a `tags` value. Keep route `summary` and `description` fields out of the code — the one-line docstring is sufficient. Do not use `response_description` unless the response shape is genuinely ambiguous.
+
+---
+
 ## Environment Variables
 
 Key variables (see `.env.example` for the full list):
