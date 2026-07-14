@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
     create_access_token,
     create_email_verification_token,
     create_password_reset_token,
@@ -16,9 +17,16 @@ from app.core.auth import (
     verify_password_reset_token,
     verify_token,
 )
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.email import send_password_reset_email, send_verification_email
-from app.core.errors import InvalidCredentials, InvalidToken, UserNotFound
+from app.core.errors import (
+    AccountInactive,
+    InvalidCredentials,
+    InvalidToken,
+    RateLimitExceeded,
+    UserNotFound,
+)
 from app.core.rate_limit import rate_limit
 from app.core.redis import (
     invalidate_refresh_token,
@@ -37,6 +45,9 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     TokenResponse,
 )
+from app.schemas.users import UserResponse
+
+ACCESS_TOKEN_EXPIRE_SECONDS = ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = structlog.get_logger()
@@ -71,7 +82,12 @@ async def register(
     refresh_token, jti = create_refresh_token(str(user.id))
     await store_refresh_token(str(user.id), jti, REFRESH_TOKEN_TTL)
 
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=ACCESS_TOKEN_EXPIRE_SECONDS,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -86,9 +102,9 @@ async def login(
         f"rl:login:{client_ip}", 10, 15 * 60
     )
     if not allowed:
-        raise HTTPException(
-            status_code=429,
-            detail={"error": "RATE_LIMIT_EXCEEDED", "message": "Too many login attempts", "retry_after": retry_after},
+        raise RateLimitExceeded(
+            message="Too many login attempts",
+            detail={"retry_after": retry_after},
             headers={"Retry-After": str(retry_after)},
         )
 
@@ -99,13 +115,18 @@ async def login(
     if not verify_password(request.password, user.hashed_password):
         raise InvalidCredentials()
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account is inactive")
+        raise AccountInactive()
 
     access_token = create_access_token(str(user.id))
     refresh_token, jti = create_refresh_token(str(user.id))
     await store_refresh_token(str(user.id), jti, REFRESH_TOKEN_TTL)
 
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=ACCESS_TOKEN_EXPIRE_SECONDS,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/google", response_model=TokenResponse)
@@ -123,7 +144,7 @@ async def google_oauth(
         raise InvalidToken("Invalid Google token")
 
     data = resp.json()
-    if data.get("aud") != __import__("app.core.config", fromlist=["settings"]).settings.GOOGLE_CLIENT_ID:
+    if data.get("aud") != settings.GOOGLE_CLIENT_ID:
         raise InvalidToken("Token audience mismatch")
 
     email = data.get("email")
@@ -148,7 +169,12 @@ async def google_oauth(
     refresh_token, jti = create_refresh_token(str(user.id))
     await store_refresh_token(str(user.id), jti, REFRESH_TOKEN_TTL)
 
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=ACCESS_TOKEN_EXPIRE_SECONDS,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -175,7 +201,12 @@ async def refresh_token(
     new_refresh_token, new_jti = create_refresh_token(user_id)
     await store_refresh_token(user_id, new_jti, REFRESH_TOKEN_TTL)
 
-    return TokenResponse(access_token=new_access_token, refresh_token=new_refresh_token)
+    return TokenResponse(
+        access_token=new_access_token,
+        refresh_token=new_refresh_token,
+        expires_in=ACCESS_TOKEN_EXPIRE_SECONDS,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/logout", status_code=204)

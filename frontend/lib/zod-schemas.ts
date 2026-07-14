@@ -26,12 +26,12 @@ export const resetPasswordSchema = z
   })
 
 export const profileSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  name: z.string().min(1, 'Name is required').max(255, 'Name is too long'),
 })
 
 export const topicSchema = z.object({
-  topic_name: z.string().min(1, 'Topic name is required'),
-  study_url: z.string().url('Enter a valid URL'),
+  topic_name: z.string().min(1, 'Topic name is required').max(500, 'Topic name is too long'),
+  study_url: z.string().url('Enter a valid URL').max(2048, 'URL is too long'),
 })
 
 export const questionSchema = z.object({

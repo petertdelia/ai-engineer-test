@@ -76,6 +76,16 @@ export interface AssessmentSession {
   questions: SessionQuestion[]
 }
 
+export interface SessionListItem {
+  id: string
+  mode: SessionMode
+  difficulty: Difficulty
+  status: SessionStatus
+  started_at: string | null
+  ended_at: string | null
+  created_at: string
+}
+
 export interface SessionScore {
   id: number
   session_id: number
@@ -101,26 +111,26 @@ export interface Certificate {
 }
 
 export interface SavedTopic {
-  id: number
-  user_id: number
-  topic: string
-  created_at: string
+  id: string
+  topic_name: string
+  study_url: string
 }
 
 export interface UserStats {
-  technology_breakdown: Array<{
+  tech_strengths: Array<{
     technology: string
-    avg_engineering_skill: number
-    avg_ai_collaboration: number
-    avg_ai_trust_calibration: number
-    avg_engineering_judgement: number
+    average_score: number
     session_count: number
   }>
-  score_trend: Array<{
-    session_id: number
+  score_trends: Array<{
+    session_id: string
     completed_at: string
     total_score: number
+    mode: string
   }>
+  total_sessions: number
+  completed_exams: number
+  best_score: number | null
 }
 
 export interface PipelineRun {

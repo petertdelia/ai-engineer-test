@@ -84,11 +84,14 @@ async def create_session(
 
 @router.get("", response_model=list[SessionListItem])
 async def list_sessions(
+    limit: int = 50,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """List the current user's assessment sessions, most recent first."""
     repo = SessionRepository(db)
-    sessions = await repo.get_by_user(current_user.id)
+    sessions = await repo.get_by_user(current_user.id, limit=limit, offset=offset)
     return sessions
 
 

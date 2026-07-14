@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { formatDate, formatScore, modeLabel, difficultyLabel } from '@/lib/utils'
 import { AlertCircle, PlayCircle } from 'lucide-react'
-import type { AssessmentSession, UserStats } from '@/types'
+import type { SessionListItem, UserStats } from '@/types'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const user = session?.user as any
 
   const [sessions, stats] = await Promise.all([
-    apiFetch<{ items: AssessmentSession[]; total: number }>('/sessions?limit=5').catch(() => null),
+    apiFetch<SessionListItem[]>('/sessions?limit=5').catch(() => null),
     apiFetch<UserStats>('/users/me/stats').catch(() => null),
   ])
 
@@ -50,26 +50,20 @@ export default async function DashboardPage() {
       )}
 
       {/* Technology breakdown */}
-      {stats && stats.technology_breakdown.length > 0 && (
+      {stats && stats.tech_strengths.length > 0 && (
         <div>
           <h2 className="mb-3 text-lg font-semibold">Skill breakdown</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {stats.technology_breakdown.slice(0, 6).map((t) => (
+            {stats.tech_strengths.slice(0, 6).map((t) => (
               <Card key={t.technology}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-mono">{t.technology}</CardTitle>
                   <CardDescription>{t.session_count} session{t.session_count !== 1 ? 's' : ''}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Engineering Skill</span>
-                      <span className="font-mono">{formatScore(t.avg_engineering_skill)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">AI Collaboration</span>
-                      <span className="font-mono">{formatScore(t.avg_ai_collaboration)}</span>
-                    </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Average score</span>
+                    <span className="font-mono">{formatScore(t.average_score)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -81,7 +75,7 @@ export default async function DashboardPage() {
       {/* Recent sessions */}
       <div>
         <h2 className="mb-3 text-lg font-semibold">Recent sessions</h2>
-        {!sessions || sessions.items.length === 0 ? (
+        {!sessions || sessions.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               No sessions yet.{' '}
@@ -90,7 +84,7 @@ export default async function DashboardPage() {
           </Card>
         ) : (
           <div className="space-y-2">
-            {sessions.items.map((s) => (
+            {sessions.map((s) => (
               <Card key={s.id}>
                 <CardContent className="flex items-center justify-between py-4">
                   <div className="flex items-center gap-3">

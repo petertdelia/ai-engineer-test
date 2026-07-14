@@ -10,13 +10,16 @@ from app.core.logging import RequestContextMiddleware, configure_logging
 # Configure structured logging
 configure_logging()
 
-# Initialize Sentry (no-op if DSN is not set)
+# Initialize Sentry — skip silently if DSN is absent or a placeholder
 if settings.SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        traces_sample_rate=0.1,
-        environment="production",
-    )
+    try:
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            traces_sample_rate=0.1,
+            environment="production",
+        )
+    except Exception:
+        pass
 
 app = FastAPI(
     title="Crucible — AI Engineering Assessment Platform",

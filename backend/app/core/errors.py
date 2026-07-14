@@ -7,9 +7,15 @@ class AppError(Exception):
     error_code: str = "INTERNAL_ERROR"
     message: str = "An unexpected error occurred"
 
-    def __init__(self, message: str | None = None, detail: dict | None = None):
+    def __init__(
+        self,
+        message: str | None = None,
+        detail: dict | None = None,
+        headers: dict | None = None,
+    ):
         self.message = message or self.__class__.message
         self.detail = detail or {}
+        self.headers = headers or {}
         super().__init__(self.message)
 
 
@@ -89,6 +95,12 @@ class InvalidToken(AppError):
     message = "Invalid or expired token"
 
 
+class AccountInactive(AppError):
+    status_code = 403
+    error_code = "ACCOUNT_INACTIVE"
+    message = "Account is inactive"
+
+
 class NotScoredSession(AppError):
     status_code = 409
     error_code = "SESSION_NOT_COMPLETED"
@@ -115,6 +127,7 @@ def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
             "message": exc.message,
             "detail": exc.detail,
         },
+        headers=exc.headers or None,
     )
 
 

@@ -28,9 +28,16 @@ requires_postgres = pytest.mark.skipif(
 )
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def pg_engine():
-    """Create the async engine for the test PostgreSQL database."""
+    """
+    Create the async engine for the test PostgreSQL database.
+
+    Function-scoped rather than session-scoped: pytest-asyncio runs each
+    test in its own event loop, and asyncpg connections are bound to the
+    loop that created them. A session-scoped engine gets reused across
+    loops and fails with "attached to a different loop".
+    """
     url = os.getenv("DATABASE_URL")
     if not url or not url.startswith("postgresql"):
         pytest.skip("PostgreSQL not available — skipping repository tests")

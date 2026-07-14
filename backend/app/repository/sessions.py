@@ -60,7 +60,7 @@ class SessionRepository:
             .limit(limit)
             .offset(offset)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def start(
         self,
@@ -205,7 +205,7 @@ class SessionRepository:
             .where(SessionEvent.session_id == session_id)
             .order_by(SessionEvent.occurred_at)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def flag_session(
         self,
@@ -246,4 +246,4 @@ class SessionRepository:
         if is_flagged is not None:
             query = query.where(AssessmentSession.is_flagged_for_review == is_flagged)
         result = await self.db.execute(query.limit(limit).offset(offset))
-        return result.scalars().all()
+        return list(result.scalars().all())

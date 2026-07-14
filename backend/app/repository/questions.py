@@ -65,7 +65,7 @@ class QuestionRepository:
         result = await self.db.execute(
             query.order_by(Question.created_at.desc()).limit(limit).offset(offset)
         )
-        return result.scalars().all(), total
+        return list(result.scalars().all()), total
 
     async def create(self, **kwargs) -> Question:
         question = Question(**kwargs)

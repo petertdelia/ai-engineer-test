@@ -52,7 +52,7 @@ async def _seed_user_with_completed_exam(pg_session, technologies: list[str], sc
         time_limit_seconds=3600,
         status=SessionStatus.completed,
         started_at=datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        ended_at=datetime.now(timezone.utc),
     )
     pg_session.add(session)
     await pg_session.flush()

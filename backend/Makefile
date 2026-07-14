@@ -14,6 +14,8 @@ worker:
 	uv run celery -A app.workers.celery_app worker --loglevel=info
 
 test:
+	DATABASE_URL=postgresql+asyncpg://crucible:crucible@localhost:5432/crucible_test \
+	REDIS_URL=redis://localhost:6379/0 \
 	uv run pytest
 
 test-unit:

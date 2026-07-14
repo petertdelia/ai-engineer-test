@@ -24,19 +24,27 @@ TEST_SECRET_KEY = "test-secret-key-that-is-long-enough-for-jwt-hmac"
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
 
-def _patch_jsonb_for_sqlite():
-    """Replace PostgreSQL JSONB columns with JSON so SQLite can create the schema."""
+def _sqlite_metadata():
+    """
+    Copy of Base.metadata with PostgreSQL JSONB columns swapped for JSON so
+    SQLite can create the schema. Built on a separate MetaData rather than
+    mutating Base.metadata in place — the latter is shared with the real
+    PostgreSQL repository tests (tests/repository/), which need the actual
+    JSONB type for jsonb_array_elements_text() queries to work.
+    """
     import sqlalchemy as sa
     from sqlalchemy.dialects.postgresql import JSONB
 
+    meta = sa.MetaData()
     for table in Base.metadata.tables.values():
-        for col in table.columns:
+        new_table = table.to_metadata(meta)
+        for col in new_table.columns:
             if isinstance(col.type, JSONB):
                 col.type = sa.JSON()
+    return meta
 
 
-# Patch before creating engine
-_patch_jsonb_for_sqlite()
+SQLITE_METADATA = _sqlite_metadata()
 
 # Override SECRET_KEY in settings so test JWTs use a long-enough key
 import app.core.config as _cfg
@@ -47,10 +55,10 @@ _cfg.settings.SECRET_KEY = TEST_SECRET_KEY
 async def test_engine():
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(SQLITE_METADATA.create_all)
     yield engine
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(SQLITE_METADATA.drop_all)
     await engine.dispose()
 
 

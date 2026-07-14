@@ -73,7 +73,7 @@ class UserRepository:
                 ROUND(AVG(
                     (sq.score_engineering_skill + sq.score_ai_collaboration +
                      sq.score_ai_trust_calibration + sq.score_engineering_judgement) / 4.0
-                ), 2) AS average_score,
+                )::numeric, 2) AS average_score,
                 COUNT(DISTINCT s.id) AS session_count
             FROM assessment_sessions s
             JOIN session_questions sq ON sq.session_id = s.id
@@ -106,7 +106,7 @@ class UserRepository:
         summary_query = text("""
             SELECT
                 COUNT(*) AS total_sessions,
-                COUNT(*) FILTER (WHERE mode = 'exam' AND status = 'completed') AS completed_exams,
+                COUNT(*) FILTER (WHERE s.mode = 'exam' AND s.status = 'completed') AS completed_exams,
                 MAX(ss.total_score) AS best_score
             FROM assessment_sessions s
             LEFT JOIN session_scores ss ON ss.session_id = s.id AND ss.status = 'completed'

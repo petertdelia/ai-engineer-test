@@ -5,18 +5,13 @@ import { useSession } from 'next-auth/react'
 import { Plus, X } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { apiClientFetch } from '@/lib/api-client'
+import { topicSchema, type TopicInput } from '@/lib/zod-schemas'
 import type { SavedTopic } from '@/types'
-
-const topicSchema = z.object({
-  topic: z.string().min(2, 'Topic must be at least 2 characters').max(120, 'Too long'),
-})
-type TopicForm = z.infer<typeof topicSchema>
 
 export default function TopicsPage() {
   const { data: authSession } = useSession()
@@ -24,35 +19,35 @@ export default function TopicsPage() {
 
   const [topics, setTopics] = useState<SavedTopic[]>([])
   const [loading, setLoading] = useState(true)
-  const [removing, setRemoving] = useState<number | null>(null)
+  const [removing, setRemoving] = useState<string | null>(null)
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<TopicForm>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<TopicInput>({
     resolver: zodResolver(topicSchema),
   })
 
   useEffect(() => {
     if (!accessToken) return
-    apiClientFetch<SavedTopic[]>('/me/topics', accessToken)
+    apiClientFetch<SavedTopic[]>('/users/me/topics', accessToken)
       .then(setTopics)
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [accessToken])
 
-  const onAdd = async (data: TopicForm) => {
+  const onAdd = async (data: TopicInput) => {
     if (!accessToken) return
-    const newTopic = await apiClientFetch<SavedTopic>('/me/topics', accessToken, {
+    const newTopic = await apiClientFetch<SavedTopic>('/users/me/topics', accessToken, {
       method: 'POST',
-      body: JSON.stringify({ topic: data.topic }),
+      body: JSON.stringify({ topic_name: data.topic_name, study_url: data.study_url }),
     })
     setTopics(prev => [newTopic, ...prev])
     reset()
   }
 
-  const onRemove = async (id: number) => {
+  const onRemove = async (id: string) => {
     if (!accessToken) return
     setRemoving(id)
     try {
-      await apiClientFetch(`/me/topics/${id}`, accessToken, { method: 'DELETE' })
+      await apiClientFetch(`/users/me/topics/${id}`, accessToken, { method: 'DELETE' })
       setTopics(prev => prev.filter(t => t.id !== id))
     } finally {
       setRemoving(null)
@@ -74,15 +69,25 @@ export default function TopicsPage() {
           <CardDescription>e.g. "Kafka consumer groups", "RAG evaluation strategies"</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onAdd)} className="flex gap-2">
+          <form onSubmit={handleSubmit(onAdd)} className="flex flex-col gap-2 sm:flex-row">
             <div className="flex-1">
               <Input
-                {...register('topic')}
+                {...register('topic_name')}
                 placeholder="Enter a topic..."
-                className={errors.topic ? 'border-destructive' : ''}
+                className={errors.topic_name ? 'border-destructive' : ''}
               />
-              {errors.topic && (
-                <p className="mt-1 text-xs text-destructive">{errors.topic.message}</p>
+              {errors.topic_name && (
+                <p className="mt-1 text-xs text-destructive">{errors.topic_name.message}</p>
+              )}
+            </div>
+            <div className="flex-1">
+              <Input
+                {...register('study_url')}
+                placeholder="https://..."
+                className={errors.study_url ? 'border-destructive' : ''}
+              />
+              {errors.study_url && (
+                <p className="mt-1 text-xs text-destructive">{errors.study_url.message}</p>
               )}
             </div>
             <Button type="submit" disabled={isSubmitting}>
@@ -106,12 +111,14 @@ export default function TopicsPage() {
             <ul className="space-y-2">
               {topics.map(t => (
                 <li key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                  <span className="text-sm">{t.topic}</span>
+                  <a href={t.study_url} target="_blank" rel="noreferrer" className="text-sm underline">
+                    {t.topic_name}
+                  </a>
                   <button
                     onClick={() => onRemove(t.id)}
                     disabled={removing === t.id}
                     className="text-muted-foreground hover:text-destructive disabled:opacity-50"
-                    aria-label={`Remove ${t.topic}`}
+                    aria-label={`Remove ${t.topic_name}`}
                   >
                     <X className="h-4 w-4" />
                   </button>

@@ -49,4 +49,4 @@ class CertificateRepository:
             .where(Certificate.user_id == user_id)
             .order_by(Certificate.created_at.desc())
         )
-        return result.scalars().all()
+        return list(result.scalars().all())

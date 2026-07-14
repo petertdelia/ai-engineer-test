@@ -9,12 +9,8 @@ import { z } from 'zod'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { apiClientFetch } from '@/lib/api-client'
-
-const profileSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-})
-type ProfileForm = z.infer<typeof profileSchema>
+import { apiClientFetch, buildUrl } from '@/lib/api-client'
+import { profileSchema, type ProfileInput } from '@/lib/zod-schemas'
 
 const passwordSchema = z.object({
   current_password: z.string().min(1, 'Required'),
@@ -40,7 +36,7 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const profileForm = useForm<ProfileForm>({
+  const profileForm = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
     defaultValues: { name: user?.name ?? '' },
   })
@@ -50,11 +46,11 @@ export default function SettingsPage() {
     defaultValues: { current_password: '', new_password: '', confirm_password: '' },
   })
 
-  const onSaveProfile = async (data: ProfileForm) => {
+  const onSaveProfile = async (data: ProfileInput) => {
     if (!accessToken) return
     setProfileError(null)
     try {
-      await apiClientFetch('/me', accessToken, {
+      await apiClientFetch('/users/me', accessToken, {
         method: 'PATCH',
         body: JSON.stringify({ name: data.name }),
       })
@@ -89,7 +85,7 @@ export default function SettingsPage() {
     if (!accessToken) return
     setExportLoading(true)
     try {
-      const blob = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me/export`, {
+      const blob = await fetch(buildUrl('/users/me/export'), {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then(r => r.blob())
       const url = URL.createObjectURL(blob)
@@ -108,7 +104,7 @@ export default function SettingsPage() {
     if (!accessToken) return
     setDeleting(true)
     try {
-      await apiClientFetch('/me', accessToken, { method: 'DELETE' })
+      await apiClientFetch('/users/me', accessToken, { method: 'DELETE' })
       await signOut({ callbackUrl: '/' })
     } catch {
       setDeleting(false)

@@ -17,7 +17,7 @@ class TopicRepository:
             .where(SavedTopic.user_id == user_id)
             .order_by(SavedTopic.created_at.desc())
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def create(
         self,
